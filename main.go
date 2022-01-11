@@ -144,17 +144,18 @@ func main() {
 	index := query(c+"/system/indexer/failures", *user, *pass)
 	tput := query(c+"/system/throughput", *user, *pass)
 	inputs := query(c+"/system/inputs", *user, *pass)
-	total := query(c+"/count/total", *user, *pass)
+	total := query(c+"/system/indexer/overview", *user, *pass)
+	total_count := total["counts"].(map[string]interface{})["events"]
 
 	elapsed := time.Since(start)
 
 	// generate performance data output
-	perf(elapsed.Seconds(), total["events"].(float64), inputs["total"].(float64), tput["throughput"].(float64), index["total"].(float64))
+	perf(elapsed.Seconds(), total_count.(float64), inputs["total"].(float64), tput["throughput"].(float64), index["total"].(float64))
 
 	// fix for backwards compatiblity if no index error threshold is set
 	if len(*indexwarn) == 0 || len(*indexcrit) == 0 {
 		quit(OK, fmt.Sprintf("Service is running!\n%.f total events processed\n%.f index failures\n%.f throughput\n%.f sources\nCheck took %v\n",
-			total["events"].(float64), index["total"].(float64), tput["throughput"].(float64), inputs["total"].(float64), elapsed), nil)
+			total_count.(float64), index["total"].(float64), tput["throughput"].(float64), inputs["total"].(float64), elapsed), nil)
 	}
 
 	// convert indexwarn and indexcrit strings to float64 variables for comparison below
@@ -170,15 +171,15 @@ func main() {
 	// handle index thresholds
 	if index["total"].(float64) < indexwarn2 && index["total"].(float64) < indexcrit2 {
 		quit(OK, fmt.Sprintf("Service is running!\n%.f total events processed\n%.f index failures\n%.f throughput\n%.f sources\nCheck took %v\n",
-			total["events"].(float64), index["total"].(float64), tput["throughput"].(float64), inputs["total"].(float64), elapsed), nil)
+			total_count.(float64), index["total"].(float64), tput["throughput"].(float64), inputs["total"].(float64), elapsed), nil)
 	}
 	if index["total"].(float64) >= indexwarn2 && index["total"].(float64) < indexcrit2 {
 		quit(WARNING, fmt.Sprintf("Index Failure above Warning Limit!\nService is running\n%.f total events processed\n%.f index failures\n%.f throughput\n%.f sources\nCheck took %v\n",
-			total["events"].(float64), index["total"].(float64), tput["throughput"].(float64), inputs["total"].(float64), elapsed), nil)
+			total_count.(float64), index["total"].(float64), tput["throughput"].(float64), inputs["total"].(float64), elapsed), nil)
 	}
 	if index["total"].(float64) >= indexcrit2 {
 		quit(CRITICAL, fmt.Sprintf("Index Failure above Critical Limit!\nService is running\n%.f total events processed\n%.f index failures\n%.f throughput\n%.f sources\nCheck took %v\n",
-			total["events"].(float64), index["total"].(float64), tput["throughput"].(float64), inputs["total"].(float64), elapsed), nil)
+			total_count.(float64), index["total"].(float64), tput["throughput"].(float64), inputs["total"].(float64), elapsed), nil)
 	}
 
 }
